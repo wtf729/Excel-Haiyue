@@ -1,18 +1,7 @@
 import pandas as pd
 from openpyxl.styles import Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-
-# 映射表
-COLUMN_TYPE_MAPPING = {
-    "传票号": "order_number",
-    "株式会社": "company_name",
-    "片名": "animation_name",
-    "话数": "animation_episode",
-    "动画数量": "count_ani",
-    "上色数量": "count_coloring",
-    "一原数量": "count_1_yuan",
-    "二原数量": "count_2_yuan"
-}
+from config.constants import COLUMN_TYPE_MAPPING
 
 def data_sort_func(selected_df, internal_column_names, prices, output_sheets_config, save_path):
     # 1. 列重命名
@@ -67,7 +56,7 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
                 # 设置列宽
                 if worksheet[f"{col_letter}1"].row == 1:
                     if col_name in ["株式会社", "片名"]:
-                        worksheet.column_dimensions[col_letter].width = 40
+                        worksheet.column_dimensions[col_letter].width = 50
 
                 # 居中对齐特定列
                 if col_name in ["话数", "动画数量", "上色数量", "一原数量", "二原数量"]:
