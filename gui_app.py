@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import pandas as pd
 from data_sort import data_sort_func
-from config.constants import COLUMN_TYPE_MAPPING, COLUMN_TYPES
+from config.constants import COLUMN_TYPE_MAPPING, COLUMN_TYPES_INPUT_SELECTIONS, COLUMN_TYPES_OUTPUT_SELECTIONS
 
 def excel_col_to_index(col_str):
     col_str = col_str.upper()
@@ -53,7 +53,7 @@ frame.pack(pady=10)
 
 tk.Label(frame, text="起始行:").grid(row=0, column=0)
 start_row_entry = tk.Entry(frame, width=5)
-start_row_entry.insert(0, "3")
+start_row_entry.insert(0, "4")
 start_row_entry.grid(row=0, column=1)
 
 tk.Label(frame, text="结束行:").grid(row=0, column=2)
@@ -106,7 +106,7 @@ for i in range(8):
     tk.Label(type_frame, text=f"第{i+1}列").grid(row=0, column=i*2, padx=3, pady=2, sticky="e")
     default_value = default_column_types[i] if i < len(default_column_types) else "无"
     var = tk.StringVar(value=default_value)
-    combo = ttk.Combobox(type_frame, values=COLUMN_TYPES, textvariable=var, width=8, state="readonly")
+    combo = ttk.Combobox(type_frame, values=COLUMN_TYPES_INPUT_SELECTIONS, textvariable=var, width=8, state="readonly")
     combo.grid(row=1, column=i*2, padx=3, pady=2)
     column_type_vars.append(var)
 
@@ -131,7 +131,7 @@ def create_output_sheet_section(sheet_num):
 
         tk.Label(item_frame, text=f"第{i + 1}列").pack()
         var = tk.StringVar(value="无")
-        combo = ttk.Combobox(item_frame, values=COLUMN_TYPES, textvariable=var, width=10, state="readonly")
+        combo = ttk.Combobox(item_frame, values=COLUMN_TYPES_OUTPUT_SELECTIONS, textvariable=var, width=10, state="readonly")
         combo.pack()
 
         vars.append(var)
@@ -183,8 +183,8 @@ def process_excel():
                     return
 
         df = pd.read_excel(file_path)
-        start_row = int(start_row_entry.get()) - 1
-        end_row = int(end_row_entry.get())
+        start_row = int(start_row_entry.get()) - 2
+        end_row = int(end_row_entry.get()) - 1
         start_col = excel_col_to_index(start_col_entry.get())
         end_col = excel_col_to_index(end_col_entry.get()) + 1
 
