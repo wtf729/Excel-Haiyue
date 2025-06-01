@@ -7,10 +7,8 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
     # 1. 列重命名
     df = selected_df.copy()
     df.columns = internal_column_names
-
     # 2. 删除全为空的行
     df.dropna(how='all', inplace=True)
-
     # 3. 验证 count_* 列
     count_cols = [col for col in ["count_ani", "count_coloring", "count_1_yuan", "count_2_yuan"] if col in df.columns]
     error_rows = []
@@ -30,25 +28,19 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
                 error_rows.append(f"第 {idx + 2} 行（列名：{col}）的值非法：是负数（原值：{original_value}）")
     if error_rows:
         raise ValueError("检测到以下单元格不是合法的非负数字：\n" + "\n".join(error_rows))
-
     # 校验通过后再安全转换
     for col in count_cols:
         df[col] = pd.to_numeric(df[col], errors='raise').astype(float)
-
     # 4. 排序
     sort_keys = [k for k in ["animation_name", "animation_episode", "order_number"] if k in df.columns]
     df.sort_values(by=sort_keys, ascending=True, inplace=True)
-
     # 5. 写入 Excel（检查点工作表）
     df_sorted_for_excel = df.rename(columns=COLUMN_TYPE_OUTPUT_CN)
-
     # 1. 删除 order_number 列
     df_for_calc = df.drop(columns=["order_number"]) if "order_number" in df.columns else df.copy()
-
     # 2. 动态选取存在的 count_* 列
     count_cols = [col for col in ["count_ani", "count_coloring", "count_1_yuan", "count_2_yuan"] if
                   col in df_for_calc.columns]
-
     # 3. 分组汇总
     # 预设想要用来分组的列
     desired_group_keys = ["company_name", "animation_name", "animation_episode"]
@@ -57,10 +49,8 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
     # 如果没有分组列，直接使用原始数据；否则进行分组汇总
     if actual_group_keys:
         df_for_calc = df_for_calc.groupby(actual_group_keys, as_index=False)[count_cols].sum()
-
     # 4. 转换回中文列名
     df_calculated_for_excel = df_for_calc.rename(columns=COLUMN_TYPE_OUTPUT_CN)
-
     # 5. 添加价格列
     price_field_map = {
         cn_name: internal_name
@@ -70,7 +60,6 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
     for cn_label, internal_col in price_field_map.items():
         if cn_label in prices:
             df_for_calc[internal_col] = prices[cn_label]
-
     # 6. 计算总价列
     for count_col, price_col, total_col in [
         ("count_ani", "price_ani", "total_ani"),
@@ -81,16 +70,75 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
         if count_col in df_for_calc.columns and price_col in df_for_calc.columns:
             df_for_calc[total_col] = df_for_calc[count_col] * df_for_calc[price_col]
 
-    print(output_sheets_config)
 
+    # 导出Excel
     with pd.ExcelWriter(save_path, engine='openpyxl') as writer:
         align_center = Alignment(horizontal='center', vertical='center')
         thin_border = Border(
             left=Side(style='thin'), right=Side(style='thin'),
             top=Side(style='thin'), bottom=Side(style='thin')
         )
-        # 写入 test 表
-        df_for_calc.to_excel(writer, sheet_name='data_test', index=False)
+        # 写入动态输出工作表
+        used_sheet_names = set()
+        default_base_name = "工作表"
+        name_counter = 1
+        for sheet in output_sheets_config:
+            if not sheet.get("enabled"):
+                continue
+            style = sheet.get("style", "中文")
+            sheet_name = sheet.get("sheet_name", "").strip()
+            # 如果用户没有填写 sheet_name，就自动生成唯一的默认名
+            if not sheet_name:
+                while True:
+                    generated_name = f"{default_base_name}{name_counter}"
+                    name_counter += 1
+                    if generated_name not in used_sheet_names:
+                        sheet_name = generated_name
+                        break
+            # 如果填写了，确保与之前的不冲突
+            elif sheet_name in used_sheet_names:
+                suffix = 1
+                original_name = sheet_name
+                while sheet_name in used_sheet_names:
+                    sheet_name = f"{original_name}_{suffix}"
+                    suffix += 1
+            # 更新工作表名并记录已使用的名称
+            sheet["sheet_name"] = sheet_name
+            used_sheet_names.add(sheet_name)
+            # 提取指定列
+            columns = [col for col in sheet.get("columns", []) if col]
+            df_to_output = df_for_calc[[col for col in columns if col in df_for_calc.columns]].copy()
+            # 识别出当前表中的数量列（英文字段名）
+            count_fields_in_this_sheet = [
+                col for col in ["count_ani", "count_coloring", "count_1_yuan", "count_2_yuan"]
+                if col in df_to_output.columns
+            ]
+            # 若存在这些列，且某行这些列全为0，则删除该行
+            if count_fields_in_this_sheet:
+                non_zero_mask = (df_to_output[count_fields_in_this_sheet] != 0).any(axis=1)
+                df_to_output = df_to_output[non_zero_mask]
+            # 应用列名样式
+            if style == "中文":
+                df_to_output.rename(columns=COLUMN_TYPE_OUTPUT_CN, inplace=True)
+            elif style == "日文":
+                df_to_output.rename(columns=COLUMN_TYPE_OUTPUT_JP, inplace=True)
+            # 写入工作表
+            df_to_output.to_excel(writer, sheet_name=sheet_name, index=False)
+            worksheet = writer.sheets[sheet_name]
+            # 设置样式
+            for row in worksheet.iter_rows(min_row=1, max_row=worksheet.max_row,
+                                           min_col=1, max_col=worksheet.max_column):
+                for cell in row:
+                    col_letter = get_column_letter(cell.column)
+                    col_name = worksheet[f"{col_letter}1"].value
+                    if col_name in ["株式会社", "片名", "タィトル"]:
+                        worksheet.column_dimensions[col_letter].width = 50
+                    if col_name in ["话数", "动画", "上色", "一原", "二原", "動画", "仕上げ", "L/Oー作监", "2原", "単価", "合計"]:
+                        cell.alignment = Alignment(horizontal='center', vertical='center')
+                    cell.border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin')
+                    )
         # 写入 calculated 表
         df_calculated_for_excel.to_excel(writer, sheet_name='data_calculated', index=False)
         worksheet_calculated = writer.sheets['data_calculated']

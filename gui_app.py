@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import pandas as pd
 from data_sort import data_sort_func
-from config.constants import COLUMN_TYPE_MAPPING, COLUMN_TYPES_INPUT_SELECTIONS, COLUMN_TYPES_OUTPUT_SELECTIONS
+from config.constants import COLUMN_TYPE_MAPPING, COLUMN_TYPES_INPUT_SELECTIONS, COLUMN_TYPES_OUTPUT_SELECTIONS, OUTPUT_PRESETS, PRESET_CONFIG
 
 def excel_col_to_index(col_str):
     col_str = col_str.upper()
@@ -14,10 +14,34 @@ def excel_col_to_index(col_str):
         index = index * 26 + (ord(char) - ord('A') + 1)
     return index - 1
 
+def apply_preset(preset_name):
+    if preset_name not in PRESET_CONFIG:
+        return
+
+    configs = PRESET_CONFIG[preset_name]
+    for i in range(3):
+        if i < len(configs):
+            config = configs[i]
+            output_enabled_vars[i].set(config.get("enabled", True))
+            output_name_style_vars[i].set(config.get("style", "中文"))
+            output_sheet_name_vars[i].set(config.get("sheet_name", f"输出工作表{i+1}"))
+
+            column_names = config.get("columns", [])
+            for j in range(10):
+                col_type = column_names[j] if j < len(column_names) else "无"
+                cn_label = next((k for k, v in COLUMN_TYPE_MAPPING.items() if v == col_type), "无")
+                output_column_type_vars_list[i][j].set(cn_label)
+        else:
+            output_enabled_vars[i].set(False)
+            output_sheet_name_vars[i].set(f"输出工作表{i+1}")
+            for j in range(10):
+                output_column_type_vars_list[i][j].set("无")
+
 # --- GUI 初始化 ---
 root = TkinterDnD.Tk()
 root.title("海悦动画 - 产量表助手")
 root.geometry("1000x800")
+root.iconbitmap("assets/app_icon.ico")
 
 file_path_var = tk.StringVar()
 file_path_var.set("请将 Excel 文件拖入此处")
@@ -53,22 +77,22 @@ frame.pack(pady=10)
 
 tk.Label(frame, text="起始行:").grid(row=0, column=0)
 start_row_entry = tk.Entry(frame, width=5)
-start_row_entry.insert(0, "4")
+start_row_entry.insert(0, "")
 start_row_entry.grid(row=0, column=1)
 
-tk.Label(frame, text="结束行:").grid(row=0, column=2)
-end_row_entry = tk.Entry(frame, width=5)
-end_row_entry.insert(0, "100")
-end_row_entry.grid(row=0, column=3)
-
-tk.Label(frame, text="起始列:").grid(row=0, column=4)
+tk.Label(frame, text="起始列:").grid(row=0, column=2)
 start_col_entry = tk.Entry(frame, width=5)
-start_col_entry.insert(0, "A")
-start_col_entry.grid(row=0, column=5)
+start_col_entry.insert(0, "")
+start_col_entry.grid(row=0, column=3)
+
+tk.Label(frame, text="结束行:").grid(row=0, column=4)
+end_row_entry = tk.Entry(frame, width=5)
+end_row_entry.insert(0, "")
+end_row_entry.grid(row=0, column=5)
 
 tk.Label(frame, text="结束列:").grid(row=0, column=6)
 end_col_entry = tk.Entry(frame, width=5)
-end_col_entry.insert(0, "H")
+end_col_entry.insert(0, "")
 end_col_entry.grid(row=0, column=7)
 
 price_frame = tk.Frame(root)
@@ -90,10 +114,11 @@ tk.Label(price_frame, text="二原单价:").grid(row=0, column=6)
 price_2_yuan_input = tk.Entry(price_frame, width=8)
 price_2_yuan_input.grid(row=0, column=7)
 
+
 # 输入列类型设置
 default_column_types = [
-    "传票号", "株式会社", "片名", "话数",
-    "动画数量", "上色数量", "二原数量", "无"
+    "传票号", "无", "无", "无",
+    "无", "无", "无", "无"
 ]
 
 column_type_vars = []
@@ -111,6 +136,12 @@ for i in range(8):
     column_type_vars.append(var)
 
 # 输出设置区域
+tk.Label(root, text="输出参数预设：").pack(pady=(10, 0))
+preset_var = tk.StringVar(value="无")
+preset_dropdown = ttk.Combobox(root, values=OUTPUT_PRESETS, textvariable=preset_var, width=10, state="readonly")
+preset_dropdown.pack()
+preset_dropdown.bind("<<ComboboxSelected>>", lambda e: apply_preset(preset_var.get()))
+
 def create_output_sheet_section(sheet_num):
     section_frame = tk.LabelFrame(root, text=f"输出工作表{sheet_num}", padx=5, pady=5)
     section_frame.pack(padx=10, pady=5)
@@ -123,7 +154,7 @@ def create_output_sheet_section(sheet_num):
     top_row_frame.grid(row=0, column=0, pady=3)
 
     # 启用勾选框
-    enabled_var = tk.BooleanVar(value=True)
+    enabled_var = tk.BooleanVar(value=False)
     check = tk.Checkbutton(top_row_frame, text=f"启用输出工作表{sheet_num}", variable=enabled_var)
     check.pack(side="left", padx=10)
 
@@ -155,13 +186,13 @@ def create_output_sheet_section(sheet_num):
     vars = []
     combos = []
 
-    for i in range(8):
+    for i in range(10):
         item_frame = tk.Frame(row_frame)
         item_frame.pack(side="left", padx=5)
 
         tk.Label(item_frame, text=f"第{i + 1}列").pack()
         var = tk.StringVar(value="无")
-        combo = ttk.Combobox(item_frame, values=COLUMN_TYPES_OUTPUT_SELECTIONS, textvariable=var, width=10, state="readonly")
+        combo = ttk.Combobox(item_frame, values=COLUMN_TYPES_OUTPUT_SELECTIONS, textvariable=var, width=7, state="readonly")
         combo.pack()
 
         vars.append(var)
