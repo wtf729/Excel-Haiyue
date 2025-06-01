@@ -4,6 +4,13 @@ from tkinter import ttk, filedialog
 import pandas as pd
 from data_sort import data_sort_func
 from config.constants import COLUMN_TYPE_MAPPING, COLUMN_TYPES_INPUT_SELECTIONS, COLUMN_TYPES_OUTPUT_SELECTIONS, OUTPUT_PRESETS, PRESET_CONFIG
+import os
+import sys
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 def excel_col_to_index(col_str):
     col_str = col_str.upper()
@@ -39,9 +46,14 @@ def apply_preset(preset_name):
 
 # --- GUI 初始化 ---
 root = TkinterDnD.Tk()
-root.title("海悦动画 - 产量表助手")
+if getattr(sys, 'frozen', False):
+    exe_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+else:
+    exe_name = "海悦动画产量表助手"
+root.title(exe_name)
 root.geometry("1000x800")
-root.iconbitmap("assets/app_icon.ico")
+icon_path = resource_path("assets/app_icon.ico")
+root.iconbitmap(icon_path)
 
 file_path_var = tk.StringVar()
 file_path_var.set("请将 Excel 文件拖入此处")
