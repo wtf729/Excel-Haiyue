@@ -113,17 +113,47 @@ for i in range(8):
 # 输出设置区域
 def create_output_sheet_section(sheet_num):
     section_frame = tk.LabelFrame(root, text=f"输出工作表{sheet_num}", padx=5, pady=5)
-    section_frame.pack(padx=10, pady=5, fill="x")
+    section_frame.pack(padx=10, pady=5)
 
+    # 让 section_frame 的列支持居中对齐
+    section_frame.grid_columnconfigure(0, weight=1)
+
+    # 包裹启用/下拉/命名输入的小框架（整行水平居中）
+    top_row_frame = tk.Frame(section_frame)
+    top_row_frame.grid(row=0, column=0, pady=3)
+
+    # 启用勾选框
     enabled_var = tk.BooleanVar(value=True)
-    check = tk.Checkbutton(section_frame, text=f"启用输出工作表{sheet_num}", variable=enabled_var)
-    check.pack(anchor="w")
+    check = tk.Checkbutton(top_row_frame, text=f"启用输出工作表{sheet_num}", variable=enabled_var)
+    check.pack(side="left", padx=10)
+
+    # 输出列名样式组合
+    name_style_frame = tk.Frame(top_row_frame)
+    name_style_frame.pack(side="left", padx=10)
+
+    tk.Label(name_style_frame, text="输出列名样式:").pack(side="left")
+    name_style_var = tk.StringVar(value="中文")
+    name_style_dropdown = ttk.Combobox(name_style_frame, values=["中文", "日文"], textvariable=name_style_var, width=6,
+                                       state="readonly")
+    name_style_dropdown.pack(side="left")
+
+    # 工作表名称组合
+    sheet_name_frame = tk.Frame(top_row_frame)
+    sheet_name_frame.pack(side="left", padx=10)
+
+    tk.Label(sheet_name_frame, text="工作表名称:").pack(side="left")
+    sheet_name_var = tk.StringVar(value=f"输出工作表{sheet_num}")
+    sheet_name_entry = tk.Entry(sheet_name_frame, textvariable=sheet_name_var, width=14)
+    sheet_name_entry.pack(side="left")
+
+    # 输出列设置区域
+    row_frame = tk.Frame(section_frame)
+    row_frame.grid(row=1, column=0, pady=5)
+
+
 
     vars = []
     combos = []
-
-    row_frame = tk.Frame(section_frame)
-    row_frame.pack(anchor="center", pady=5)
 
     for i in range(8):
         item_frame = tk.Frame(row_frame)
@@ -141,20 +171,27 @@ def create_output_sheet_section(sheet_num):
         state = "readonly" if enabled_var.get() else "disabled"
         for combo in combos:
             combo.config(state=state)
+        name_style_dropdown.config(state=state)
+        sheet_name_entry.config(state="normal" if enabled_var.get() else "disabled")
 
     enabled_var.trace_add("write", toggle_state)
     toggle_state()
 
-    return enabled_var, vars
+    return enabled_var, vars, name_style_var, sheet_name_var
+
 
 
 output_enabled_vars = []
 output_column_type_vars_list = []
+output_name_style_vars = []
+output_sheet_name_vars = []
 
 for i in range(1, 4):
-    enabled_var, col_vars = create_output_sheet_section(i)
+    enabled_var, col_vars, name_style_var, sheet_name_var = create_output_sheet_section(i)
     output_enabled_vars.append(enabled_var)
     output_column_type_vars_list.append(col_vars)
+    output_name_style_vars.append(name_style_var)
+    output_sheet_name_vars.append(sheet_name_var)
 
 # 执行处理函数
 def process_excel():
@@ -223,7 +260,9 @@ def process_excel():
                 internal_names = [COLUMN_TYPE_MAPPING.get(var.get(), None) for var in labels]
                 output_sheets_config.append({
                     "enabled": True,
-                    "columns": internal_names
+                    "columns": internal_names,
+                    "style": output_name_style_vars[i].get(),
+                    "sheet_name": output_sheet_name_vars[i].get()
                 })
 
         save_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
