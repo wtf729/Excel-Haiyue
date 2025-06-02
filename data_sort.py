@@ -1,5 +1,5 @@
 import pandas as pd
-from openpyxl.styles import Alignment, Border, Side
+from openpyxl.styles import Alignment, Border, Side, Font
 from openpyxl.utils import get_column_letter
 from config.constants import COLUMN_TYPE_MAPPING, COLUMN_TYPE_OUTPUT_CN, COLUMN_TYPE_OUTPUT_JP
 
@@ -36,6 +36,26 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
     df.sort_values(by=sort_keys, ascending=True, inplace=True)
     # 5. 写入 Excel（检查点工作表）
     df_sorted_for_excel = df.rename(columns=COLUMN_TYPE_OUTPUT_CN)
+
+    # 插入 data_sorted_sum 工作表（带合计行）
+    sum_group_keys_all = ["株式会社", "片名", "话数"]
+    actual_sum_group_keys = [col for col in sum_group_keys_all if col in df_sorted_for_excel.columns]
+    sum_value_fields = ["动画", "上色", "一原", "二原"]
+    actual_value_fields = [col for col in sum_value_fields if col in df_sorted_for_excel.columns]
+    if actual_sum_group_keys:
+        grouped = df_sorted_for_excel.groupby(actual_sum_group_keys, as_index=False)
+        rows_with_sums = []
+        for _, group in grouped:
+            rows_with_sums.extend(group.to_dict('records'))
+            sum_row = {col: "" for col in df_sorted_for_excel.columns}
+            sum_row["传票号"] = "SUM"
+            for key in actual_sum_group_keys:
+                sum_row[key] = group.iloc[0][key]
+            for field in actual_value_fields:
+                sum_row[field] = group[field].sum()
+            rows_with_sums.append(sum_row)
+        df_sorted_with_sum = pd.DataFrame(rows_with_sums, columns=df_sorted_for_excel.columns)
+
     # 1. 删除 order_number 列
     df_for_calc = df.drop(columns=["order_number"]) if "order_number" in df.columns else df.copy()
     # 2. 动态选取存在的 count_* 列
@@ -105,9 +125,15 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
             # 更新工作表名并记录已使用的名称
             sheet["sheet_name"] = sheet_name
             used_sheet_names.add(sheet_name)
-            # 提取指定列
+            # 提取所有请求的列
             columns = [col for col in sheet.get("columns", []) if col]
-            df_to_output = df_for_calc[[col for col in columns if col in df_for_calc.columns]].copy()
+            # 新建一个 DataFrame，逐列添加（无则填 0）
+            df_to_output = pd.DataFrame()
+            for col in columns:
+                if col in df_for_calc.columns:
+                    df_to_output[col] = df_for_calc[col]
+                else:
+                    df_to_output[col] = 0  # 不存在的列统一填 0
             # 识别出当前表中的数量列（英文字段名）
             count_fields_in_this_sheet = [
                 col for col in ["count_ani", "count_coloring", "count_1_yuan", "count_2_yuan"]
@@ -157,6 +183,31 @@ def data_sort_func(selected_df, internal_column_names, prices, output_sheets_con
                     cell.alignment = align_center
                 # 所有格子添加边框
                 cell.border = thin_border
+        # 写入 sorted_sum 表
+        df_sorted_with_sum.to_excel(writer, sheet_name="data_sorted_sum", index=False)
+        worksheet_sorted_sum = writer.sheets["data_sorted_sum"]
+        bold_font = Font(bold=True)
+        # 设置格式
+        for row in worksheet_sorted_sum.iter_rows(min_row=1, max_row=worksheet_sorted_sum.max_row,
+                                       min_col=1, max_col=worksheet_sorted_sum.max_column):
+            for cell in row:
+                col_letter = get_column_letter(cell.column)
+                col_name = worksheet_sorted_sum[f"{col_letter}1"].value
+                # 设置列宽
+                if worksheet_sorted_sum[f"{col_letter}1"].row == 1:
+                    if col_name in ["株式会社", "片名"]:
+                        worksheet_sorted_sum.column_dimensions[col_letter].width = 50
+                # 居中对齐特定列
+                if col_name in ["话数", "动画", "上色", "一原", "二原"]:
+                    cell.alignment = align_center
+                # 所有格子添加边框
+                cell.border = thin_border
+        # 汇总行加粗
+        for row in worksheet_sorted_sum.iter_rows(min_row=2, max_row=worksheet_sorted_sum.max_row):
+            first_cell_value = row[0].value
+            if first_cell_value == "SUM":
+                for cell in row:
+                    cell.font = bold_font
         # 写入 sorted 表
         df_sorted_for_excel.to_excel(writer, sheet_name='data_sorted', index=False)
         worksheet_sorted = writer.sheets['data_sorted']

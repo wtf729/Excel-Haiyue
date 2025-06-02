@@ -3,7 +3,10 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import pandas as pd
 from data_sort import data_sort_func
-from config.constants import COLUMN_TYPE_MAPPING, COLUMN_TYPES_INPUT_SELECTIONS, COLUMN_TYPES_OUTPUT_SELECTIONS, OUTPUT_PRESETS, PRESET_CONFIG
+from config.constants import (
+    COLUMN_TYPE_MAPPING, COLUMN_TYPES_INPUT_SELECTIONS, COLUMN_TYPES_OUTPUT_SELECTIONS,
+    OUTPUT_PRESETS, OUTPUT_PRESET_CONFIG, INPUT_PRESETS, INPUT_PRESET_CONFIG
+)
 import os
 import sys
 
@@ -21,11 +24,29 @@ def excel_col_to_index(col_str):
         index = index * 26 + (ord(char) - ord('A') + 1)
     return index - 1
 
-def apply_preset(preset_name):
-    if preset_name not in PRESET_CONFIG:
+
+def apply_input_preset(preset_name):
+    if preset_name not in INPUT_PRESET_CONFIG:
         return
 
-    configs = PRESET_CONFIG[preset_name]
+    config = INPUT_PRESET_CONFIG[preset_name]
+
+    # 设置列类型
+    column_types = config.get("column_types", [])
+    for i, var in enumerate(column_type_vars):
+        if i < len(column_types):
+            var.set(column_types[i])
+        else:
+            var.set("无")
+
+
+
+
+def apply_output_preset(preset_name):
+    if preset_name not in OUTPUT_PRESET_CONFIG:
+        return
+
+    configs = OUTPUT_PRESET_CONFIG[preset_name]
     for i in range(3):
         if i < len(configs):
             config = configs[i]
@@ -49,7 +70,7 @@ root = TkinterDnD.Tk()
 if getattr(sys, 'frozen', False):
     exe_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 else:
-    exe_name = "海悦动画产量表助手"
+    exe_name = "海悦动画产量表助手 v1.1"
 root.title(exe_name)
 root.geometry("1000x800")
 icon_path = resource_path("assets/app_icon.ico")
@@ -147,12 +168,28 @@ for i in range(8):
     combo.grid(row=1, column=i*2, padx=3, pady=2)
     column_type_vars.append(var)
 
-# 输出设置区域
-tk.Label(root, text="输出参数预设：").pack(pady=(10, 0))
-preset_var = tk.StringVar(value="无")
-preset_dropdown = ttk.Combobox(root, values=OUTPUT_PRESETS, textvariable=preset_var, width=10, state="readonly")
-preset_dropdown.pack()
-preset_dropdown.bind("<<ComboboxSelected>>", lambda e: apply_preset(preset_var.get()))
+
+# 预设 frame
+preset_frame = tk.Frame(root)
+preset_frame.pack(pady=(10, 0))
+
+# 输入参数预设
+tk.Label(preset_frame, text="输入预设：").pack(side="left", padx=(0, 5))
+input_preset_var = tk.StringVar(value="无")
+input_preset_dropdown = ttk.Combobox(preset_frame, values=INPUT_PRESETS, textvariable=input_preset_var, width=10, state="readonly")
+input_preset_dropdown.pack(side="left")
+input_preset_dropdown.bind("<<ComboboxSelected>>", lambda e: apply_input_preset(input_preset_var.get()))
+
+# 间距
+tk.Label(preset_frame, text="     ").pack(side="left")
+
+# 输出参数预设
+tk.Label(preset_frame, text="输出预设：").pack(side="left", padx=(0, 5))
+output_preset_var = tk.StringVar(value="无")
+output_preset_dropdown = ttk.Combobox(preset_frame, values=OUTPUT_PRESETS, textvariable=output_preset_var, width=10, state="readonly")
+output_preset_dropdown.pack(side="left")
+output_preset_dropdown.bind("<<ComboboxSelected>>", lambda e: apply_output_preset(output_preset_var.get()))
+
 
 def create_output_sheet_section(sheet_num):
     section_frame = tk.LabelFrame(root, text=f"输出工作表{sheet_num}", padx=5, pady=5)

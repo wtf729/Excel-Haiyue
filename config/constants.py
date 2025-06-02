@@ -72,12 +72,32 @@ COLUMN_TYPES_OUTPUT_SELECTIONS = [
 ]
 
 
+INPUT_PRESETS = ["无", "全部"]
+
+INPUT_PRESET_CONFIG = {
+    "无": {
+        "column_types": ["传票号"]
+    },
+    "全部": {
+        "column_types": ["传票号", "株式会社", "片名", "话数", "动画数量", "上色数量", "一原数量", "二原数量"]
+    }
+}
+
+
+
 OUTPUT_PRESETS = [
     "无",
     "Asahi", "MSJ"
 ]
 
-PRESET_CONFIG = {
+OUTPUT_PRESET_CONFIG = {
+    "无": [
+        {
+            "enabled": False,
+            "style": "中文",
+            "columns": []
+        }
+    ],
     "Asahi": [
         {
             "enabled": True,
