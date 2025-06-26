@@ -70,7 +70,7 @@ root = TkinterDnD.Tk()
 if getattr(sys, 'frozen', False):
     exe_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 else:
-    exe_name = "海悦动画产量表助手 v1.1"
+    exe_name = "海悦动画产量表助手 v1.2"
 root.title(exe_name)
 root.geometry("1000x800")
 icon_path = resource_path("assets/app_icon.ico")
@@ -292,11 +292,11 @@ def process_excel():
             if value:
                 try:
                     num = float(value)
-                    if num <= 0:
+                    if num < 0:
                         raise ValueError
                     prices[label] = num
                 except ValueError:
-                    status_text.insert(tk.END, f"{label} 请输入正数！\n")
+                    status_text.insert(tk.END, f"{label} 不能为负数！\n")
                     return
 
         df = pd.read_excel(file_path)
@@ -347,7 +347,7 @@ def process_excel():
 
         save_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
         if not save_path:
-            status_text.insert(tk.END, "用户取消了保存操作。\n")
+            status_text.insert(tk.END, "取消了保存操作。\n")
             return
 
         try:
