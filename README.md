@@ -12,4 +12,4 @@
 - **包含空行过滤与非法数据检测**
 
 ## 界面
-![screenshots](https://github-production-user-asset-6210df.s3.amazonaws.com/213094583/459314503-cc2bd1c1-4548-44e7-8247-61e186332916.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20250626%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250626T083852Z&X-Amz-Expires=300&X-Amz-Signature=ed23cb080a5036462de62516148a72c19e18d360a0c3d0b976c0e4c28acd34ad&X-Amz-SignedHeaders=host)
+![screenshots](https://github.com/wtf729/Excel-Haiyue/blob/b990553ec0910c047fd140fbfdaea5d5854c834a/screenshot.png?raw=true)
